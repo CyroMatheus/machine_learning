@@ -135,6 +135,9 @@ class MachineLearning():
             previsoes = census_random_forest.predict(self.X_census_teste)
             self.statistics(method, data_base, census_random_forest, self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste, previsoes, previsores)
 
+    def one_r(self):
+        pass
+
 def launcher():
     warehouse = {
         "credit_risk": None,
