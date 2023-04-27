@@ -13,6 +13,7 @@ from sklearn import tree
 import seaborn as sns
 import pandas as pd
 import numpy as np
+
 class MachineLearning():
     def __init__(self):
         # load_csv_files
@@ -66,94 +67,85 @@ class MachineLearning():
             pickle.dump([self.X_risco_credito, self.y_risco_credito], f)
         shutil.move(f'{os.getcwd()}//risco_credito.pkl', f'{os.getcwd()}/data/my_progress/risco_credito.pkl')
 
-    def statistics(self, trainer, x_treinamento, x_teste, y_treinamento, y_teste, previsoes):
+    def statistics(self, method, data_base, trainer, x_treinamento, x_teste, y_treinamento, y_teste, previsoes, previsores):
         cm = ConfusionMatrix(trainer)
         cm.fit(x_treinamento, y_treinamento)
 
-        # print(accuracy_score(y_teste, previsoes))
-        print(cm.score(x_teste, y_teste))
-        print(confusion_matrix(y_teste, previsoes))
+        print(f"\n{method}_{data_base}")
+        print(f"accuracy_score: {cm.score(x_teste, y_teste)}")
+        pprint.pprint(f"confusion_matrix: {confusion_matrix(y_teste, previsoes)}")
+        print("classification_report: ")
         print(classification_report(y_teste, previsoes))
+        if (method != "naive_bayes" and data_base != "credit_risk") and (method != "random_forest"):
+            names_class = list()
+            for name_class in trainer.classes_:
+                names_class.append(str(name_class))
 
-    def naive_bayes(self, data_base):
-        if data_base == "risco_credito":
+            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
+            if method == "decision_tree" and data_base == "census":
+                tree.plot_tree(trainer, class_names=names_class, filled=True)
+            else:
+                tree.plot_tree(trainer, feature_names=previsores, class_names=names_class, filled=True)
+            fig.savefig(f'{data_base}_{method}.png')
+            shutil.move(f'{os.getcwd()}//{data_base}_{method}.png', f'{os.getcwd()}/data/imagens/{data_base}_{method}.png')
+
+    def naive_bayes(self, method,  data_base, previsores):
+        if data_base == "credit_risk":
             naive_risco_credito = GaussianNB()
             naive_risco_credito.fit(self.X_risco_credito, self.y_risco_credito)
             previsao = naive_risco_credito.predict([[0, 0, 1, 2], [2, 0, 0, 0]])
-            # print(previsao)
+            print(f"\n{method}_{data_base}: {previsao}")
         elif data_base == "credit":
             naive_credit_data = GaussianNB()
             naive_credit_data.fit(self.X_credit_treinamento, self.y_credit_treinamento)
             previsoes = naive_credit_data.predict(self.X_credit_teste)
-            # self.statistics(naive_credit_data, previsoes, self.X_credit_treinamento, self.y_credit_treinamento, self.X_credit_teste, self.y_credit_teste)
+            self.statistics(method, data_base, naive_credit_data, self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste, previsoes, previsores)
         elif data_base == "census":
             naive_census_data = GaussianNB()
             naive_census_data.fit(self.X_census_treinamento, self.y_census_treinamento)
             previsoes = naive_census_data.predict(self.X_census_teste)
-            # self.statistics(naive_census_data, previsoes, self.X_census_treinamento, self.y_census_treinamento, self.X_census_teste, self.y_census_teste)
+            self.statistics(method, data_base, naive_census_data, self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste, previsoes, previsores)
 
-    def decision_tree(self, data_base):
-        previsores = ['income', 'age', 'loan']
-        if data_base == "risco_credito":
-            previsores = ['história', 'dívida', 'garantias', 'renda']
+    def decision_tree(self, method,  data_base, previsores):
+        if data_base == "credit_risk":
             tree_credit_risk = DecisionTreeClassifier(criterion="entropy")
             tree_credit_risk.fit(self.X_risco_credito, self.y_risco_credito)
-            # print(tree_credit_risk.feature_importances_)
-            pprint.pprint(tree.plot_tree(tree_credit_risk, feature_names=previsores, class_names=tree_credit_risk.classes_, filled=True))
-            figura, eixos = plt.subplots(nrows=1, ncols=1, figsize=(10,10))
-            # print(self.X_risco_credito, self.y_risco_credito)
-            previsoes = tree_credit_risk.predict([[0, 0, 1, 2], [2, 0, 0, 0]])
-            # print(previsoes)
+            previsao = tree_credit_risk.predict([[0, 0, 1, 2], [2, 0, 0, 0]])
+            print(f"\n{method}_{data_base}: {previsao}")
         elif data_base == "credit":
             tree_credit = DecisionTreeClassifier(criterion="entropy", random_state=0)
             tree_credit.fit(self.X_credit_treinamento, self.y_credit_treinamento)
             previsoes = tree_credit.predict(self.X_credit_teste)
-
-            names_class = list()
-            for name_class in tree_credit.classes_:
-                names_class.append(str(name_class))
-
-            fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
-            tree.plot_tree(tree_credit, feature_names=previsores, class_names=names_class, filled=True)
-            fig.savefig('credit_decision_tree.png')
-            shutil.move(f'{os.getcwd()}//credit_decision_tree.png', f'{os.getcwd()}/data/Imagens/credit_decision_tree.png')
-
-            # self.statistics(tree_credit, self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste, previsoes)
+            self.statistics(method, data_base, tree_credit, self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste, previsoes, previsores)
         elif data_base == "census":
             tree_census = DecisionTreeClassifier(criterion="entropy", random_state=0)
             tree_census.fit(self.X_census_treinamento, self.y_census_treinamento)
             previsoes = tree_census.predict(self.X_census_teste)
+            self.statistics(method, data_base, tree_census, self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste, previsoes, previsores)
 
-            names_class = list()
-            for name_class in tree_census.classes_:
-                names_class.append(str(name_class))
-            # fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(20, 20))
-            # tree.plot_tree(tree_census, feature_names=previsores, class_names=names_class, filled=True)
-            # fig.savefig('census_decision_tree.png')
-            # shutil.move(f'{os.getcwd()}//census_decision_tree.png', f'{os.getcwd()}/data/Imagens/census_decision_tree.png')
-
-            # self.statistics(tree_census, self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste, previsoes)
-
-    def random_forest(self, data_base):
+    def random_forest(self, method,  data_base, previsores):
         if data_base == "credit":
             credit_random_forest = RandomForestClassifier(n_estimators=40, criterion="entropy", random_state=0)
             credit_random_forest.fit(self.X_credit_treinamento, self.y_credit_treinamento)
             previsoes = credit_random_forest.predict(self.X_credit_teste)
-            print(accuracy_score(self.y_credit_teste, previsoes))
-            # self.statistics()
+            self.statistics(method, data_base, credit_random_forest, self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste, previsoes, previsores)
         elif data_base == "census":
             census_random_forest = RandomForestClassifier(n_estimators=40, criterion="entropy", random_state=0)
             census_random_forest.fit(self.X_census_treinamento, self.y_census_treinamento)
             previsoes = census_random_forest.predict(self.X_census_teste)
-            print(accuracy_score(self.y_census_teste, previsoes))
-            # self.statistics()
+            self.statistics(method, data_base, census_random_forest, self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste, previsoes, previsores)
 
 def launcher():
-    warehouse = ["risco_credito", "credit", "census"]
+    warehouse = {
+        "credit_risk": None,
+        "credit": ["age", "workclass", "final-weight", "education", "education-num", "marital-status", "occupation", "relationship", "race", "sex", "capital-gain", "capital-loos", "hour-per-week", "native-country"],
+        "census": ['income', 'age', 'loan'],
+    }
+
     machine_learning = MachineLearning()
     for data_base in warehouse:
-        if data_base != "risco_credito":
-            # machine_learning.naive_bayes(data_base)
-            # machine_learning.decision_tree(data_base)
-            machine_learning.random_forest(data_base)
+        machine_learning.naive_bayes("naive_bayes", data_base, warehouse[data_base])
+        machine_learning.decision_tree("decision_tree", data_base, warehouse[data_base])
+        machine_learning.random_forest("random_forest", data_base, warehouse[data_base])
+
 launcher()
