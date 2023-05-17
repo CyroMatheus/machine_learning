@@ -3,6 +3,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from yellowbrick.classifier import ConfusionMatrix
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.naive_bayes import GaussianNB
@@ -13,9 +14,11 @@ from sklearn import tree
 import seaborn as sns
 import pandas as pd
 import numpy as np
+import pickle
 
 class MachineLearning():
     def __init__(self):
+        # if not f'{os.getcwd()}/data/my_progress/census.pkl' and not f'{os.getcwd()}/data/my_progress/credit.pkl':
         # load_csv_files
         base_credit = pd.read_csv(f'{os.getcwd()}/data/my_progress/credit_data.csv')
         base_census = pd.read_csv(f'{os.getcwd()}/data/my_progress/census.csv')
@@ -66,6 +69,12 @@ class MachineLearning():
         with open('risco_credito.pkl', mode="wb") as f:
             pickle.dump([self.X_risco_credito, self.y_risco_credito], f)
         shutil.move(f'{os.getcwd()}//risco_credito.pkl', f'{os.getcwd()}/data/my_progress/risco_credito.pkl')
+        # else:
+        #     with open(f'{os.getcwd()}/data/my_progress/credit.pkl', 'rb') as f:
+        #         self.X_credit_treinamento, self.y_credit_treinamento, self.X_credit_teste, self.y_credit_teste = pickle.load(f)
+        #
+        #     with open(f'{os.getcwd()}/data/my_progress/credit.pkl', 'rb') as f:
+        #         self.X_census_treinamento, self.y_census_treinamento, self.X_census_teste, self.y_census_teste = pickle.load(f)
 
     def statistics(self, method, data_base, trainer, x_treinamento, x_teste, y_treinamento, y_teste, previsoes, previsores):
         cm = ConfusionMatrix(trainer)
@@ -135,20 +144,37 @@ class MachineLearning():
             previsoes = census_random_forest.predict(self.X_census_teste)
             self.statistics(method, data_base, census_random_forest, self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste, previsoes, previsores)
 
-    def one_r(self):
-        pass
+    def knn(self, method, data_base):
+        print(f"{method} {data_base}")
+        if data_base == "credit":
+            knn_credit = KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2)
+            knn_credit.fit(self.X_credit_treinamento, self.y_credit_treinamento)
+            previsoes = knn_credit.predict(self.X_credit_teste)
+
+            cm = ConfusionMatrix(knn_credit)
+            cm.fit(self.X_credit_treinamento, self.y_credit_treinamento)
+            print(f"accuracy_score: {cm.score(self.X_credit_teste, self.y_credit_teste)}")
+            pprint.pprint(f"confusion_matrix: {confusion_matrix(self.y_credit_teste, previsoes)}")
+        elif data_base == "census":
+            knn_census = KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2)
+            knn_census.fit(self.X_census_treinamento, self.y_census_treinamento)
+            previsoes = knn_census.predict(self.X_census_teste)
+
+            cm = ConfusionMatrix(knn_census)
+            cm.fit(self.X_census_treinamento, self.y_census_treinamento)
+            print(f"accuracy_score: {cm.score(self.X_census_teste, self.y_census_teste)}")
+            pprint.pprint(f"confusion_matrix: {confusion_matrix(self.y_census_teste, previsoes)}")
+
+
 
 def launcher():
-    warehouse = {
-        "credit_risk": None,
-        "credit": ["age", "workclass", "final-weight", "education", "education-num", "marital-status", "occupation", "relationship", "race", "sex", "capital-gain", "capital-loos", "hour-per-week", "native-country"],
-        "census": ['income', 'age', 'loan'],
-    }
+    warehouse = ["credit", "census"]
 
     machine_learning = MachineLearning()
     for data_base in warehouse:
-        machine_learning.naive_bayes("naive_bayes", data_base, warehouse[data_base])
-        machine_learning.decision_tree("decision_tree", data_base, warehouse[data_base])
-        machine_learning.random_forest("random_forest", data_base, warehouse[data_base])
+        machine_learning.knn("knn", data_base)
+        # machine_learning.naive_bayes("naive_bayes", data_base, warehouse[data_base])
+        # machine_learning.decision_tree("decision_tree", data_base, warehouse[data_base])
+        # machine_learning.random_forest("random_forest", data_base, warehouse[data_base])
 
 launcher()
