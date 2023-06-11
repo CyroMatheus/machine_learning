@@ -12,6 +12,7 @@ import os, pprint, pickle, shutil
 import matplotlib.pyplot as plt
 import plotly.express as px
 from sklearn import tree
+from sklearn.svm import SVC
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -41,7 +42,6 @@ def statistics(method, data_base, trainer, x_treinamento, x_teste, y_treinamento
 
 class MachineLearning():
     def __init__(self):
-        # if not f'{os.getcwd()}/data/my_progress/census.pkl' and not f'{os.getcwd()}/data/my_progress/credit.pkl':
         # load_csv_files
         base_credit = pd.read_csv(f'{os.getcwd()}/data/my_progress/credit_data.csv')
         base_census = pd.read_csv(f'{os.getcwd()}/data/my_progress/census.csv')
@@ -81,26 +81,13 @@ class MachineLearning():
         for index in range(4):
             self.X_risco_credito[:, index] = LabelEncoder().fit_transform(self.X_risco_credito[:, index])
 
-        with open('credit.pkl', mode="wb") as f:
-            pickle.dump([self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste], f)
-        shutil.move(f'{os.getcwd()}/credit.pkl', f'{os.getcwd()}/data/my_progress/credit.pkl')
+        files = ["credit.pkl", "census.pkl", "risco_credito.pkl"]
 
-        with open('census.pkl', mode="wb") as f:
-            pickle.dump([self.X_census_treinamento, self.X_census_teste, self.y_census_treinamento, self.y_census_teste], f)
-        shutil.move(f'{os.getcwd()}//census.pkl', f'{os.getcwd()}/data/my_progress/census.pkl')
-
-        with open('risco_credito.pkl', mode="wb") as f:
-            pickle.dump([self.X_risco_credito, self.y_risco_credito], f)
-        shutil.move(f'{os.getcwd()}//risco_credito.pkl', f'{os.getcwd()}/data/my_progress/risco_credito.pkl')
-        # else:
-        #     with open(f'{os.getcwd()}/data/my_progress/credit.pkl', 'rb') as f:
-        #         self.X_credit_treinamento, self.y_credit_treinamento, self.X_credit_teste, self.y_credit_teste = pickle.load(f)
-        #
-        #     with open(f'{os.getcwd()}/data/my_progress/credit.pkl', 'rb') as f:
-        #         self.X_census_treinamento, self.y_census_treinamento, self.X_census_teste, self.y_census_teste = pickle.load(f)
-        #
-        #     with open(f'{os.getcwd()}/data/my_progress/risco_credito.pkl', 'rb') as f:
-        #         self.X_risco_credito, self.y_risco_credito = pickle.load(f)
+        for file in files:
+            with open(file, mode="wb") as f:
+                pickle.dump(
+                    [self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste], f)
+        shutil.move(f'{os.getcwd()}/{file}', f'{os.getcwd()}/data/my_progress/{file}')
 
     def treinner(self):
         list_methods = {
@@ -109,7 +96,7 @@ class MachineLearning():
             "random_forest": RandomForestClassifier(n_estimators=40, criterion="entropy", random_state=0),
             "knn":  KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2),
             "logistic_regression": LogisticRegression(random_state=1),
-            # "svm": "",
+            "svm": SVC(kernel="linear", random_state=1, C=1.0),
         }
 
         data_base = {
