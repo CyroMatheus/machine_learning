@@ -8,6 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.naive_bayes import GaussianNB
+from sklearn.neural_network import MLPClassifier
 import os, pprint, pickle, shutil
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -26,8 +27,7 @@ def statistics(method, data_base, trainer, x_treinamento, x_teste, y_treinamento
     ac_store = cm.score(x_teste, y_teste)*100
     print("accuracy_score: %.2f" % ac_store, "%")
     pprint.pprint(f"confusion_matrix: {confusion_matrix(y_teste, previsoes)}")
-    print("classification_report: ")
-    print(classification_report(y_teste, previsoes))
+    # print(classification_report(y_teste, previsoes))
 
     try:
         names_class = list()
@@ -90,14 +90,6 @@ class MachineLearning():
         shutil.move(f'{os.getcwd()}/{file}', f'{os.getcwd()}/data/my_progress/{file}')
 
     def treinner(self):
-        list_methods = {
-            "naive_bayes": GaussianNB(),
-            "decision_tree": DecisionTreeClassifier(criterion="entropy", random_state=0),
-            "random_forest": RandomForestClassifier(n_estimators=40, criterion="entropy", random_state=0),
-            "knn":  KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2),
-            "logistic_regression": LogisticRegression(random_state=1),
-            "svm": SVC(kernel="linear", random_state=1, C=1.0),
-        }
 
         data_base = {
             "credit": {
@@ -122,6 +114,17 @@ class MachineLearning():
             }
         }
 
+        list_methods = {
+            "naive_bayes": GaussianNB(),
+            "decision_tree": DecisionTreeClassifier(criterion="entropy", random_state=0),
+            "random_forest": RandomForestClassifier(n_estimators=40, criterion="entropy", random_state=0),
+            "knn":  KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2),
+            "logistic_regression": LogisticRegression(random_state=1),
+            "svm": SVC(kernel="linear", random_state=1, C=1.0),
+            "rede_neural": MLPClassifier(max_iter=1500, verbose=True, tol=0.000010, solver='adam', activation='relu', hidden_layer_sizes=(2,2))
+            #^ ((data_base[db]["teste"]["X"].shape+1)/2) ^
+        }
+
         previsores = {
             "credit": ["age", "workclass", "final-weight", "education", "education-num", "marital-status", "occupation",
                    "relationship", "race", "sex", "capital-gain", "capital-loos", "hour-per-week", "native-country"],
@@ -133,9 +136,9 @@ class MachineLearning():
             for db in data_base:
                 methodExecutable.fit(data_base[db]["treinamento"]["X"], data_base[db]["treinamento"]["y"])
                 previsoes = methodExecutable.predict(data_base[db]["teste"]["X"])
+                print(f"\n{method}")
                 statistics(method, db, methodExecutable, data_base[db]["treinamento"]["X"], data_base[db]["teste"]["X"],
                            data_base[db]["treinamento"]["y"], data_base[db]["teste"]["y"], previsoes, previsores[db])
-
 
 def launcher():
     machine_learning = MachineLearning()
