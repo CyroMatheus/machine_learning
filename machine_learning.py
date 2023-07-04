@@ -1,14 +1,16 @@
 from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
+from sklearn.model_selection import cross_val_score, KFold
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from yellowbrick.classifier import ConfusionMatrix
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.model_selection import GridSearchCV
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.compose import ColumnTransformer
 from sklearn.naive_bayes import GaussianNB
-from sklearn.neural_network import MLPClassifier
 import os, pprint, pickle, shutil
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -89,9 +91,7 @@ class MachineLearning():
                     [self.X_credit_treinamento, self.X_credit_teste, self.y_credit_treinamento, self.y_credit_teste], f)
         shutil.move(f'{os.getcwd()}/{file}', f'{os.getcwd()}/data/my_progress/{file}')
 
-    def treinner(self):
-
-        data_base = {
+        self.data_base = {
             "credit": {
                 "treinamento": {
                     "X": self.X_credit_treinamento,
@@ -114,34 +114,147 @@ class MachineLearning():
             }
         }
 
-        list_methods = {
+        self.list_methods = {
             "naive_bayes": GaussianNB(),
             "decision_tree": DecisionTreeClassifier(criterion="entropy", random_state=0),
             "random_forest": RandomForestClassifier(n_estimators=40, criterion="entropy", random_state=0),
-            "knn":  KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2),
+            "knn": KNeighborsClassifier(n_neighbors=5, metric="minkowski", p=2),
             "logistic_regression": LogisticRegression(random_state=1),
             "svm": SVC(kernel="linear", random_state=1, C=1.0),
-            "rede_neural": MLPClassifier(max_iter=1500, verbose=True, tol=0.000010, solver='adam', activation='relu', hidden_layer_sizes=(2,2))
-            #^ ((data_base[db]["teste"]["X"].shape+1)/2) ^
+            "rede_neural": MLPClassifier(max_iter=1500, verbose=True, tol=0.000010, solver='adam', activation='relu',
+                                         hidden_layer_sizes=(2, 2))
+            # ^ ((data_base[db]["teste"]["X"].shape+1)/2) ^
         }
 
+        self.best_params = {
+            "decision_tree": {
+                'credit': {'criterion': 'entropy', 'min_samples_leaf': 2, 'min_samples_split': 2, 'splitter': 'best'},
+                'census': {'criterion': 'gini', 'min_samples_leaf': 10, 'min_samples_split': 2, 'splitter': 'best'}
+            },
+            "random_forest": {
+                'credit': {'criterion': 'entropy', 'min_samples_leaf': 1, 'min_samples_split': 2, 'n_estimators': 100},
+                'census': {}
+            },
+            "knn": {
+                'credit': {},
+                'census': {},
+            },
+            "logistic_regression": {
+                'credit': {},
+                'census': {},
+            },
+            "svm": {
+                'credit': {},
+                'census': {},
+            },
+            "rede_neural": {
+                'credit': {},
+                'census': {}
+            }
+        }
+
+    def treinner(self):
         previsores = {
             "credit": ["age", "workclass", "final-weight", "education", "education-num", "marital-status", "occupation",
                    "relationship", "race", "sex", "capital-gain", "capital-loos", "hour-per-week", "native-country"],
             "census": ['income', 'age', 'loan']
         }
 
-        for method in list_methods:
-            methodExecutable = list_methods[method]
-            for db in data_base:
-                methodExecutable.fit(data_base[db]["treinamento"]["X"], data_base[db]["treinamento"]["y"])
-                previsoes = methodExecutable.predict(data_base[db]["teste"]["X"])
+        for method in self.list_methods:
+            methodExecutable = self.list_methods[method]
+            for db in self.data_base:
+                methodExecutable.fit(self.data_base[db]["treinamento"]["X"], self.data_base[db]["treinamento"]["y"])
+                previsoes = methodExecutable.predict(self.data_base[db]["teste"]["X"])
                 print(f"\n{method}")
-                statistics(method, db, methodExecutable, data_base[db]["treinamento"]["X"], data_base[db]["teste"]["X"],
-                           data_base[db]["treinamento"]["y"], data_base[db]["teste"]["y"], previsoes, previsores[db])
+                statistics(method, db, methodExecutable, self.data_base[db]["treinamento"]["X"], self.data_base[db]["teste"]["X"],
+                           self.data_base[db]["treinamento"]["y"], self.data_base[db]["teste"]["y"], previsoes, previsores[db])
+
+    def parameter_settings(self):
+
+        parameters_methods = {
+            "decision_tree": {
+                'criterion': ['gini', 'entropy'],
+                'splitter': ['best', 'random'],
+                'min_samples_split': [2, 5, 10],
+                'min_samples_leaf': [1, 2, 10]
+            },
+            "random_forest": {
+                'criterion': ['gini', 'entropy'],
+                'n_estimators': [10,40,100,150],
+                'min_samples_split': [2,5,10],
+                'min_samples_leaf': [1,5,10]
+            },
+            "knn": {
+                'n_neighbors': [3,5,10,20],
+                'p': [1,2]
+            },
+            "logistic_regression": {
+                'tol': [0.001, 0.0001, 0.00001],
+                'C': [1.1, 1., 2.0],
+                'solver': ['lbfgs', 'sag', 'saga']
+            },
+            "svm": {
+                'tol': [0.001, 0.0001, 0.00001],
+                'C': [1.1, 1., 2.0],
+                'kernel': ['rbf', 'linear', 'poly', 'sigmoid']
+            },
+            "rede_neural": {
+                'activation': ['relu', 'logistic', 'tahn'],
+                'solver': ['adam', 'sgd'],
+                'batch_size': [10, 56],
+            }
+        }
+
+        for method in self.list_methods:
+            for db in self.data_base:
+                X_credit = np.concatenate((self.data_base[db]["treinamento"]["X"], self.data_base[db]["teste"]["X"]), axis=0)
+                y_credit = np.concatenate((self.data_base[db]["treinamento"]["y"], self.data_base[db]["teste"]["y"]), axis=0)
+                if method != "naive_bayes":
+                    grid_search = GridSearchCV(estimator=self.list_methods[method], param_grid=parameters_methods[method])
+                    grid_search.fit(X_credit, y_credit)
+                    best_params = grid_search.best_params_
+                    best_score = grid_search.best_score_
+                    print(f"\n{method} {db}")
+                    print(best_params, best_score)
+
+    def cross_validation(self):
+        results = {
+            "decision_tree": list(),
+            "random_forest": list(),
+            "knn": list(),
+            "logistic_regression": list(),
+            "svm": list(),
+            "rede_neural": list(),
+        }
+        for i in range(30):
+            kfold = KFold(n_splits=10, shuffle=True, random_state=i)
+            for method in self.list_methods:
+                for db in self.data_base:
+                    X_credit = np.concatenate((self.data_base[db]["treinamento"]["X"], self.data_base[db]["teste"]["X"]), axis=0)
+                    y_credit = np.concatenate((self.data_base[db]["treinamento"]["y"], self.data_base[db]["teste"]["y"]), axis=0)
+                    if method != 'naive_bayes':
+                        match method:
+                            case "decision_tree":
+                                treinner_method = DecisionTreeClassifier(criterion='entropy', min_samples_leaf=2, min_samples_split=2, splitter='best')
+                            case "random_forest":
+                                treinner_method = RandomForestClassifier(criterion='entropy', min_samples_leaf=1, min_samples_split=5, n_estimators=10)
+                            case "knn":
+                                treinner_method = KNeighborsClassifier()
+                            case "logistic_regression":
+                                treinner_method = LogisticRegression(C=1.0, solver='lbfgs', tol=0.0001)
+                            case "svm":
+                                treinner_method = SVC(kernel='rbf', C=2.0)
+                            case "rede_neural":
+                                treinner_method = MLPClassifier(activation='relu', batch_size=56, solver='adam')
+                        scores = cross_val_score(treinner_method, X_credit, y_credit)
+                        results[method].append(scores.mean())
+                        print(results)
+
 
 def launcher():
     machine_learning = MachineLearning()
-    machine_learning.treinner()
+    # machine_learning.treinner()
+    # machine_learning.parameter_settings()
+    # machine_learning.cross_validation()
 
 launcher()
