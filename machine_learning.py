@@ -126,33 +126,6 @@ class MachineLearning():
             # ^ ((data_base[db]["teste"]["X"].shape+1)/2) ^
         }
 
-        self.best_params = {
-            "decision_tree": {
-                'credit': {'criterion': 'entropy', 'min_samples_leaf': 2, 'min_samples_split': 2, 'splitter': 'best'},
-                'census': {'criterion': 'gini', 'min_samples_leaf': 10, 'min_samples_split': 2, 'splitter': 'best'}
-            },
-            "random_forest": {
-                'credit': {'criterion': 'entropy', 'min_samples_leaf': 1, 'min_samples_split': 2, 'n_estimators': 100},
-                'census': {}
-            },
-            "knn": {
-                'credit': {},
-                'census': {},
-            },
-            "logistic_regression": {
-                'credit': {},
-                'census': {},
-            },
-            "svm": {
-                'credit': {},
-                'census': {},
-            },
-            "rede_neural": {
-                'credit': {},
-                'census': {}
-            }
-        }
-
     def treinner(self):
         previsores = {
             "credit": ["age", "workclass", "final-weight", "education", "education-num", "marital-status", "occupation",
@@ -226,13 +199,14 @@ class MachineLearning():
             "svm": list(),
             "rede_neural": list(),
         }
-        for i in range(30):
-            kfold = KFold(n_splits=10, shuffle=True, random_state=i)
-            for method in self.list_methods:
-                for db in self.data_base:
-                    X_credit = np.concatenate((self.data_base[db]["treinamento"]["X"], self.data_base[db]["teste"]["X"]), axis=0)
-                    y_credit = np.concatenate((self.data_base[db]["treinamento"]["y"], self.data_base[db]["teste"]["y"]), axis=0)
+        for method in self.list_methods:
+            for db in self.data_base:
+                X_credit = np.concatenate((self.data_base[db]["treinamento"]["X"], self.data_base[db]["teste"]["X"]),axis=0)
+                y_credit = np.concatenate((self.data_base[db]["treinamento"]["y"], self.data_base[db]["teste"]["y"]),axis=0)
+                for i in range(30):
+                    kfold = KFold(n_splits=10, shuffle=True, random_state=i)
                     if method != 'naive_bayes':
+                        print(method, db)
                         match method:
                             case "decision_tree":
                                 treinner_method = DecisionTreeClassifier(criterion='entropy', min_samples_leaf=2, min_samples_split=2, splitter='best')
@@ -248,13 +222,22 @@ class MachineLearning():
                                 treinner_method = MLPClassifier(activation='relu', batch_size=56, solver='adam')
                         scores = cross_val_score(treinner_method, X_credit, y_credit)
                         results[method].append(scores.mean())
-                        print(results)
+                        print(i)
+        resultados  = pd.DataFrame({
+            'Decision Tree': results['decision_tree'],
+            'Random Forest': results['random_forest'],
+            'KNN': results['knn'],
+            'Logistic Regression': results['logistic_regression'],
+            'SVM': results['svm'],
+            'Rede Neural': results['rede_neural']
+        })
+        print(resultados.describe())
 
 
 def launcher():
     machine_learning = MachineLearning()
     # machine_learning.treinner()
     # machine_learning.parameter_settings()
-    # machine_learning.cross_validation()
+    machine_learning.cross_validation()
 
 launcher()
