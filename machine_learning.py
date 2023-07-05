@@ -205,24 +205,24 @@ class MachineLearning():
                 y_credit = np.concatenate((self.data_base[db]["treinamento"]["y"], self.data_base[db]["teste"]["y"]),axis=0)
                 for i in range(30):
                     kfold = KFold(n_splits=10, shuffle=True, random_state=i)
-                    if method != 'naive_bayes':
-                        print(method, db)
-                        match method:
-                            case "decision_tree":
-                                treinner_method = DecisionTreeClassifier(criterion='entropy', min_samples_leaf=2, min_samples_split=2, splitter='best')
-                            case "random_forest":
-                                treinner_method = RandomForestClassifier(criterion='entropy', min_samples_leaf=1, min_samples_split=5, n_estimators=10)
-                            case "knn":
-                                treinner_method = KNeighborsClassifier()
-                            case "logistic_regression":
-                                treinner_method = LogisticRegression(C=1.0, solver='lbfgs', tol=0.0001)
-                            case "svm":
-                                treinner_method = SVC(kernel='rbf', C=2.0)
-                            case "rede_neural":
-                                treinner_method = MLPClassifier(activation='relu', batch_size=56, solver='adam')
-                        scores = cross_val_score(treinner_method, X_credit, y_credit)
-                        results[method].append(scores.mean())
-                        print(i)
+                    match method:
+                        case "decision_tree":
+                            treinner_method = DecisionTreeClassifier(criterion='entropy', min_samples_leaf=2,
+                                                                     min_samples_split=2, splitter='best')
+                        case "random_forest":
+                            treinner_method = RandomForestClassifier(criterion='entropy', min_samples_leaf=1,
+                                                                     min_samples_split=5, n_estimators=10)
+                        case "knn":
+                            treinner_method = KNeighborsClassifier()
+                        case "logistic_regression":
+                            treinner_method = LogisticRegression(C=1.0, solver='lbfgs', tol=0.0001)
+                        case "svm":
+                            treinner_method = SVC(kernel='rbf', C=2.0)
+                        case "rede_neural":
+                            treinner_method = MLPClassifier(activation='relu', batch_size=56, solver='adam')
+                    scores = cross_val_score(treinner_method, X_credit, y_credit)
+                    results[method].append(scores.mean())
+                    print(i)
         resultados  = pd.DataFrame({
             'Decision Tree': results['decision_tree'],
             'Random Forest': results['random_forest'],
